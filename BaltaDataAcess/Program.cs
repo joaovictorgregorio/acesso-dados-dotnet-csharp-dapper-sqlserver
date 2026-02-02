@@ -17,11 +17,13 @@ namespace BaltaDataAcess
             {
                 //CreateCategory(connection);
                 //CreateManyCategory(connection);
-                //DeleteCategory(connection, Guid.Parse("f75ff994-5793-452e-9d80-23abad9354c6"));
-                //ListCategories(connection);
+                //DeleteCategory(connection, Guid.Parse("dab32d2f-a45a-446b-8ce7-fb22dd00ae56"));
+                ListCategories(connection);
                 //InsertStudents(connection);
-                ListStudents(connection);
+                //ListStudents(connection);
                 //ExecuteProcedure(connection, Guid.Parse("d8c0602e-268a-405f-a7b5-c58401bd0030"));
+                //ExecuteReadProcedureGetCoursesByCategory(connection, Guid.Parse("af3407aa-11ae-4621-a2ef-2028b85507c4"));
+                //ExecuteScalar(connection);
             }
              
             static void ListCategories(SqlConnection connection)
@@ -162,13 +164,49 @@ namespace BaltaDataAcess
                 Console.WriteLine($"{rows} alunos inseridos!");
             }
              
-            static void ExecuteProcedure(SqlConnection connection, Guid id)
+            static void ExecuteProcedureDeleteStudent(SqlConnection connection, Guid id)
             {
                 var procedure = "[spDeleteStudent]";
                 var parameters = new { StudentId = id };
 
                 var affectedRows = connection.Execute(procedure, parameters, commandType: CommandType.StoredProcedure);
                 Console.WriteLine($"{affectedRows} linhas afetadas!");
+            }
+
+            static void ExecuteReadProcedureGetCoursesByCategory(SqlConnection connection, Guid id)
+            {
+                var procedure = "[spGetCoursesByCategory]";
+                var parameters = new { CategoryId = id };
+
+                var courses = connection.Query(
+                    procedure, 
+                    parameters, 
+                    commandType: CommandType.StoredProcedure);
+
+                foreach(var course in courses)
+                {
+                    Console.WriteLine(course.Title);
+                }
+            }
+
+            static void ExecuteScalar(SqlConnection connection)
+            {
+                var category = new Category
+                {
+                    Title = "Amazon AWS",
+                    Url = "amazon",
+                    Summary = "Aprenda a desenvolver aplicações com AWS",
+                    Order = 8,
+                    Description = "Categoria destinada a serviços do AWS",
+                    Featured = false
+                };
+ 
+                var insertSql = @"INSERT INTO [Category]
+                                OUTPUT inserted.[Id]
+                                VALUES (NEWID(), @Title, @Url, @Summary, @Order, @Description, @Featured)";
+
+                var id = connection.ExecuteScalar(insertSql, category);
+                Console.WriteLine($"A categoria criada foi: {id}");
             }
         }
     }
