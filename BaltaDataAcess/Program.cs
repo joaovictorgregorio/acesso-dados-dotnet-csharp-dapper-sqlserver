@@ -18,12 +18,14 @@ namespace BaltaDataAcess
                 //CreateCategory(connection);
                 //CreateManyCategory(connection);
                 //DeleteCategory(connection, Guid.Parse("dab32d2f-a45a-446b-8ce7-fb22dd00ae56"));
-                ListCategories(connection);
+                //ListCategories(connection);
                 //InsertStudents(connection);
                 //ListStudents(connection);
                 //ExecuteProcedure(connection, Guid.Parse("d8c0602e-268a-405f-a7b5-c58401bd0030"));
                 //ExecuteReadProcedureGetCoursesByCategory(connection, Guid.Parse("af3407aa-11ae-4621-a2ef-2028b85507c4"));
                 //ExecuteScalar(connection);
+                //ReadView(connection);
+                OneToOne(connection);
             }
              
             static void ListCategories(SqlConnection connection)
@@ -207,6 +209,44 @@ namespace BaltaDataAcess
 
                 var id = connection.ExecuteScalar(insertSql, category);
                 Console.WriteLine($"A categoria criada foi: {id}");
+            }
+
+            static void ReadView(SqlConnection connection)
+            {
+                var sql = "SELECT * FROM [vwCourses];";
+                var courses = connection.Query(sql);
+
+                foreach (var course in courses)
+                {
+                    Thread.Sleep(100);
+                    Console.WriteLine($" Id: {course.Id}\n Curso: {course.Title}\n Url: {course.Url}\n Resumo: {course.Summary}\n");
+                }
+            }
+
+            static void OneToOne(SqlConnection connection)
+            {
+                var sql = @"SELECT 
+                                * 
+                            FROM 
+                                [CareerItem]
+                                INNER JOIN [Course] ON [CareerItem].[CourseId] = [Course].[Id]
+                                INNER JOIN [Career] ON [CareerItem].[CareerId] = [Career].[Id];";
+
+                var items = connection.Query<CareerItem, Course, Career, CareerItem>(
+                    sql, 
+                    (careerItem, course, career) => 
+                    { 
+                        careerItem.Course = course;
+                        careerItem.Career = career;
+                        return careerItem;
+                    }, 
+                    splitOn: "Id,Id"
+                );
+
+                foreach(var item in items)
+                {
+                    Console.WriteLine($"Carreira: {item.Career.Title} \nCurso: {item.Course.Title}\n");
+                }
             }
         }
     }
