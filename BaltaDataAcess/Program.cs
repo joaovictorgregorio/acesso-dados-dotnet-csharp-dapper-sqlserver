@@ -4,6 +4,8 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Threading;
 using System.Data;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BaltaDataAcess
 {
@@ -25,7 +27,9 @@ namespace BaltaDataAcess
                 //ExecuteReadProcedureGetCoursesByCategory(connection, Guid.Parse("af3407aa-11ae-4621-a2ef-2028b85507c4"));
                 //ExecuteScalar(connection);
                 //ReadView(connection);
-                OneToOne(connection);
+                //OneToOne(connection);
+                //OneToMany(connection);
+                QueryMultiple(connection);
             }
              
             static void ListCategories(SqlConnection connection)
@@ -246,6 +250,75 @@ namespace BaltaDataAcess
                 foreach(var item in items)
                 {
                     Console.WriteLine($"Carreira: {item.Career.Title} \nCurso: {item.Course.Title}\n");
+                }
+            }
+
+            static void OneToMany(SqlConnection connection)
+            {
+                var sql = @"SELECT 
+                                [Career].[Id],
+                                [Career].[Title],
+                                [CareerItem].[CareerId],
+                                [CareerItem].[Title]
+                            FROM 
+                                [Career]
+                            INNER JOIN 
+                                [CareerItem] ON [CareerItem].[CareerId] = [Career].[Id]    
+                            ORDER BY
+                                [Career].[Title]";
+
+                var careers = new List<Career>();
+                var items = connection.Query<Career, CareerItem, Career>(
+                    sql,
+                    (career, item) =>
+                    {
+                        var existingCareer = careers.Where(x => x.Id == career.Id).FirstOrDefault();
+                        if (existingCareer == null)
+                        {
+                            existingCareer = career;
+                            existingCareer.Items.Add(item);
+                            careers.Add(existingCareer);
+                        }
+                        else
+                        {
+                            existingCareer.Items.Add(item);
+                        }
+
+                        return career;
+                    },
+                    splitOn: "CareerId"
+                );
+
+                foreach (var career in careers)
+                {
+                    Console.WriteLine($"\nCarreira: {career.Title}\n");
+                    foreach (var item in career.Items)
+                    {
+                        Console.WriteLine($"Items da Carreira: {item.Title}");
+                    }
+                }
+            }
+
+            static void QueryMultiple(SqlConnection connection)
+            {
+                var sql = "SELECT TOP 10 * FROM [Course]; SELECT TOP 10 * FROM [Career];";
+
+                using (var multiple = connection.QueryMultiple(sql))
+                {
+                    var course = multiple.Read<Category>();
+                    var career = multiple.Read<Career>();
+
+                    foreach (var item in course)
+                    {
+                        Console.WriteLine($"Courso: {item.Title}");
+                    }
+
+                    Console.WriteLine("\n");
+
+                    foreach (var item in career)
+                    {
+                        Console.WriteLine($"Carreira: {item.Title}");
+                    }
                 }
             }
         }
